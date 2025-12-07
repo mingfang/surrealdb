@@ -20,6 +20,7 @@ mod sql;
 mod sync;
 mod tracer;
 mod version;
+mod file;
 
 use std::io;
 use std::net::SocketAddr;
@@ -92,6 +93,7 @@ impl RouterFactory for CommunityComposer {
 			.merge(ml::router())
 			.merge(api::router())
 			.merge(gql::router())
+			.merge(file::router())			
 	}
 }
 

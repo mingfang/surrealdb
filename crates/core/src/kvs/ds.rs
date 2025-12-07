@@ -10,6 +10,7 @@ use std::time::Duration;
 #[allow(unused_imports)]
 use anyhow::bail;
 use anyhow::{Context, Result, ensure};
+use crate::buc::store::ObjectKey;
 use async_channel::{Receiver, Sender};
 use bytes::{Bytes, BytesMut};
 use futures::{Future, Stream};
@@ -2228,6 +2229,23 @@ impl Datastore {
 		tx.cancel().await?;
 
 		Ok(())
+	}
+
+	pub async fn get_file(
+		&self,
+		ns: &str,
+		db: &str,
+		bucket: &str,
+		path: &str,
+	) -> Result<Vec<u8>> {
+		let tx = self.transaction(Read, Optimistic).await?;
+		let db = tx.ensure_ns_db(None, ns, db).await?;
+		let bucket_store = self.buckets.get_bucket_store(&tx, db.namespace_id, db.database_id, bucket).await?;
+		let key = ObjectKey::new(path);
+		match bucket_store.get(&key).await.map_err(|e| anyhow::anyhow!(e))? {
+			Some(bytes) => Ok(bytes.to_vec()),
+			None => Err(anyhow::anyhow!("File not found: {}", path)),
+		}
 	}
 
 	/// Invoke an API handler.
